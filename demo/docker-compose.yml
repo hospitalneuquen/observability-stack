@@ -114,7 +114,7 @@ services:
     networks: [obs]
     restart: unless-stopped
 
-  # App mate — smoke test de logs + métricas + trazas (temática argentina)
+  # App mate — smoke test de logs + métricas + trazas
   #   docker compose --profile mate up -d --build
   mate:
     profiles: ["mate"]
