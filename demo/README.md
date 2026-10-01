@@ -114,10 +114,10 @@ Chequea: containers up, Grafana/nginx, Loki/Tempo/Prometheus ready, OTLP :4318, 
 
 Manual:
 
-1. Grafana → dashboards → **Observability demo**
-2. Explore → Loki: `{service_name="mate"}` o `{job="docker"}`
-3. Explore → Tempo: service `mate`
-4. Explore → Prometheus: `mate_cebadas_total`
+1. Grafana → Dashboards → **Mate — observabilidad** (o `/d/obs-demo`)
+2. Explore → Loki: `{service_name="mate"}`
+3. Explore → Tempo: `{ resource.service.name="mate" }`
+4. Explore → Prometheus: `mate_cebadas_total{service_name="mate"}`
 5. `curl 'http://localhost:4000/cebada?gusto=dulce'`
 
 ## App mate

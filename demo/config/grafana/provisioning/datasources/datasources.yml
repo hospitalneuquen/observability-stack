@@ -12,9 +12,14 @@ datasources:
       derivedFields:
         - name: TraceID
           datasourceUid: tempo
-          matcherRegex: '"trace_id":"([a-f0-9]+)"'
+          matcherRegex: '"trace_id"\s*:\s*"([a-f0-9]+)"'
           url: "$${__value.raw}"
-          urlDisplayLabel: View trace
+          urlDisplayLabel: Ver traza
+        - name: TraceID
+          datasourceUid: tempo
+          matcherRegex: 'trace_id=([a-f0-9]+)'
+          url: "$${__value.raw}"
+          urlDisplayLabel: Ver traza
 
   - name: Tempo
     type: tempo
@@ -36,6 +41,10 @@ datasources:
         datasourceUid: prometheus
       nodeGraph:
         enabled: true
+      search:
+        hide: false
+      streamingEnabled:
+        search: false
       lokiSearch:
         datasourceUid: loki
 
