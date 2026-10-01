@@ -283,19 +283,28 @@
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "description": "trace_id recientes extraídos de los logs de mate. Click en el ID → Tempo (waterfall). El panel nativo de Tempo Search en dashboard a veces falla; Explore Tempo también sirve.",
+      "description": "trace_id via structured metadata (OTLP). Click en el ID → Tempo. Evita | json: el body OTLP es el msg y en Loki 3.7+/Grafana 13 dispara JSONParserErr.",
       "fieldConfig": {
         "defaults": {
-          "custom": { "align": "left", "filterable": true },
-          "links": [
-            {
-              "title": "Ver traza en Tempo",
-              "url": "/explore?schemaVersion=1&panes=%7B%22t1%22:%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22query%22:%22${__value.raw}%22,%22queryType%22:%22traceql%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=1",
-              "targetBlank": true
-            }
-          ]
+          "custom": { "align": "left", "filterable": true }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "trace_id" },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Ver traza en Tempo",
+                    "url": "/explore?schemaVersion=1&panes=%7B%22t1%22:%7B%22datasource%22:%22tempo%22,%22queries%22:%5B%7B%22refId%22:%22A%22,%22query%22:%22${__value.raw}%22,%22queryType%22:%22traceql%22%7D%5D,%22range%22:%7B%22from%22:%22now-1h%22,%22to%22:%22now%22%7D%7D%7D&orgId=1",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "gridPos": { "h": 10, "w": 14, "x": 0, "y": 19 },
       "id": 30,
@@ -308,7 +317,7 @@
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "editorMode": "code",
-          "expr": "sum by (trace_id) (count_over_time({service_name=\"mate\"} | json | trace_id != \"\" [15m]))",
+          "expr": "sum by (trace_id) (count_over_time({service_name=\"mate\"} | trace_id =~ \".+\" [15m]))",
           "legendFormat": "__auto",
           "queryType": "instant",
           "refId": "A"
@@ -342,7 +351,7 @@
     },
     {
       "datasource": { "type": "loki", "uid": "loki" },
-      "description": "Abrí el detalle del log y usá el link Ver traza (derived field → Tempo).",
+      "description": "Filtro por structured metadata trace_id (sin | json).",
       "gridPos": { "h": 10, "w": 10, "x": 14, "y": 19 },
       "id": 31,
       "options": {
@@ -358,7 +367,7 @@
         {
           "datasource": { "type": "loki", "uid": "loki" },
           "editorMode": "code",
-          "expr": "{service_name=\"mate\"} | json | trace_id != \"\"",
+          "expr": "{service_name=\"mate\"} | trace_id =~ \".+\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -451,5 +460,5 @@
   "timezone": "browser",
   "title": "Mate — observabilidad",
   "uid": "obs-demo",
-  "version": 4
+  "version": 5
 }
