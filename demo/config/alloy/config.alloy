@@ -1,0 +1,155 @@
+// Observability demo — Grafana Alloy
+// Receives OTLP + Docker logs (label obs.enabled=true) → Loki / Tempo / Prometheus
+
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// ---------------------------------------------------------------------------
+// OTLP intake (apps → Alloy)
+// ---------------------------------------------------------------------------
+
+otelcol.receiver.otlp "default" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    metrics = [otelcol.processor.transform.prom_labels.input]
+    logs    = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+  }
+}
+
+// Copy selected resource attrs onto metric datapoints → Prometheus labels
+// (avoids resource_to_telemetry_conversion=true which promotes ALL attrs).
+otelcol.processor.transform "prom_labels" {
+  error_mode = "ignore"
+
+  metric_statements {
+    context = "datapoint"
+    statements = [
+      `set(attributes["service_name"], resource.attributes["service.name"])`,
+      `set(attributes["deployment_environment"], resource.attributes["deployment.environment"])`,
+    ]
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    metrics = [otelcol.exporter.prometheus.default.input]
+    logs    = [otelcol.exporter.otlphttp.loki.input]
+    traces  = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Loki native OTLP endpoint
+otelcol.exporter.otlphttp "loki" {
+  client {
+    endpoint = "http://loki:3100/otlp"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+otelcol.exporter.prometheus "default" {
+  forward_to = [prometheus.remote_write.default.receiver]
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Docker stdout → Loki (containers with label obs.enabled=true)
+// ---------------------------------------------------------------------------
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "filtered" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_obs_enabled"]
+    regex         = "true"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.filtered.output
+  labels     = { "job" = "docker" }
+  forward_to = [loki.process.docker.receiver]
+}
+
+loki.process "docker" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.docker {}
+
+  stage.json {
+    expressions = {
+      level                   = "level",
+      service_name            = "service.name",
+      deployment_environment  = "deployment.environment",
+      msg                     = "msg",
+      trace_id                = "trace_id",
+      span_id                 = "span_id",
+      module                  = "module",
+    }
+  }
+
+  // Promote only low-cardinality labels
+  stage.labels {
+    values = {
+      level                  = "level",
+      service_name           = "service_name",
+      deployment_environment = "deployment_environment",
+    }
+  }
+
+  stage.label_drop {
+    values = ["filename", "stream"]
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

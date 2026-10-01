@@ -1,0 +1,23 @@
+{
+  "name": "mate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App mate para smoke-test de logs, métricas y trazas (OTel SDK)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --require ./src/otel.js src/index.js"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.56.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.57.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+    "@opentelemetry/resources": "^1.30.0",
+    "@opentelemetry/sdk-metrics": "^1.30.0",
+    "@opentelemetry/sdk-node": "^0.57.0",
+    "@opentelemetry/semantic-conventions": "^1.28.0",
+    "express": "^4.21.2",
+    "pino": "^9.6.0",
+    "pino-http": "^10.3.0"
+  }
+}

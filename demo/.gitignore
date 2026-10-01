@@ -1,0 +1,5 @@
+# demo — secrets y overrides locales
+.env
+*.pem
+*.key
+data/
